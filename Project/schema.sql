@@ -175,36 +175,23 @@ FROM `Branches`
 INNER JOIN `Accounts` ON `Accounts`.`branchId` = `Branches`.`id`;
 
 -- Triggers
-CREATE TRIGGER update_account_balance
-AFTER INSERT ON Transactions
+DELIMITER //
+CREATE TRIGGER update_account_balance_after_update
+AFTER UPDATE ON Transactions
 FOR EACH ROW
 BEGIN
-  -- Update the account balance based on the transaction amount
+  -- Calculate the difference between the old and new transaction amounts
+  DECLARE amount_diff DECIMAL(10, 2);
+  SET amount_diff = NEW.amount - OLD.amount;
+  
+  -- Update the account balance based on the amount difference
   UPDATE Accounts
-  SET currentBalance = currentBalance + NEW.amount
+  SET currentBalance = currentBalance + amount_diff
   WHERE id = NEW.accountId;
-END;
+END //
+DELIMITER ;
 
-CREATE TRIGGER archive_deleted_records
-AFTER DELETE ON Employees
-FOR EACH ROW
-BEGIN
-  -- Insert the deleted employee record into the DeletedEmployees table
-  INSERT INTO DeletedEmployees (id, personId, branchId, position, deletedAt)
-  VALUES (OLD.id, OLD.personId, OLD.branchId, OLD.position, CURRENT_TIMESTAMP);
-END;
-
-CREATE TRIGGER enforce_maximum_loan_amount
-BEFORE INSERT ON Loans
-FOR EACH ROW
-BEGIN
-  -- Check if the loan amount exceeds the maximum allowed amount
-  IF NEW.amount > 100000 THEN
-    SIGNAL SQLSTATE '45000'
-    SET MESSAGE_TEXT = 'Loan amount exceeds maximum allowed amount';
-  END IF;
-END;
-
+DELIMITER //
 CREATE TRIGGER prevent_delete_customer_with_active_accounts
 BEFORE DELETE ON Customers
 FOR EACH ROW
@@ -218,21 +205,59 @@ BEGIN
     SIGNAL SQLSTATE '45000'
     SET MESSAGE_TEXT = 'Cannot delete customer with active accounts';
   END IF;
-END;
+END //
+DELIMITER ;
 
+
+DELIMITER //
+CREATE TRIGGER enforce_maximum_loan_amount
+BEFORE INSERT ON Loans
+FOR EACH ROW
+BEGIN
+  -- Check if the loan amount exceeds the maximum allowed amount
+  IF NEW.amount > 100000 THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Loan amount exceeds maximum allowed amount';
+  END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER prevent_delete_customer_with_active_accounts
+BEFORE DELETE ON Customers
+FOR EACH ROW
+BEGIN
+  -- Declare a variable to store the count of active accounts
+  DECLARE active_account_count INT;
+  
+  -- Check if the customer has any active accounts
+  SELECT COUNT(*) INTO active_account_count
+  FROM Accounts
+  WHERE customerId = OLD.id AND accountStatus = 'active';
+  
+  -- Raise an error if any active accounts are found
+  IF active_account_count > 0 THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Cannot delete customer with active accounts';
+  END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
 CREATE TRIGGER update_account_balance_after_update
 AFTER UPDATE ON Transactions
 FOR EACH ROW
 BEGIN
   -- Calculate the difference between the old and new transaction amounts
-  DECLARE @amount_diff DECIMAL(10, 2);
-  SET @amount_diff = NEW.amount - OLD.amount;
+  DECLARE amount_diff DECIMAL(10, 2);
+  SET amount_diff = NEW.amount - OLD.amount;
   
   -- Update the account balance based on the amount difference
   UPDATE Accounts
-  SET currentBalance = currentBalance + @amount_diff
+  SET currentBalance = currentBalance + amount_diff
   WHERE id = NEW.accountId;
-END;
+END //
+DELIMITER ;
 
 -- Optimization
 CREATE INDEX first_name_idx ON `People` (`firstName`);
