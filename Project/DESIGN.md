@@ -2,7 +2,7 @@
 
 By Danial Pezeshpoor
 
-Video overview: <URL HERE>
+Video overview: https://youtu.be/sECmIOVYgCg?si=d5Ar_dFDUXQpsjlj 
 
 
 ## Scope
@@ -73,8 +73,8 @@ The LoanPayments table has a foreign key reference to the Loans table (via loanI
 The Transactions table has a foreign keyreference to the Accounts table (via accountId).
 The Transfers table has foreign key references to the Accounts table (via originAccountId and destinationAccountId).
 
-### Entity Relationship Attribute Diagram
-![ERA-Diagram](ERA-Diagram.png)
+## Entity Realtionship Attribute Diagram
+![ERAD](ERA-Diagram.png)
 
 ## Optimizations
 
